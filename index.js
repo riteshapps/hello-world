@@ -3,7 +3,7 @@ const http = require('http');
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
-// Format date as: YYYY-MM-DD HH:mm:ss
+// Format timestamp: YYYY-MM-DD HH:mm:ss
 function formatDate(date) {
   const pad = (n) => n.toString().padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
@@ -13,7 +13,7 @@ function formatDate(date) {
 const server = http.createServer((req, res) => {
   const start = Date.now();
 
-  // Example route
+  // Basic routing
   if (req.url === '/' && req.method === 'GET') {
     res.statusCode = 200;
     res.setHeader('Content-Type', 'text/html');
@@ -24,16 +24,40 @@ const server = http.createServer((req, res) => {
     res.end('Not Found');
   }
 
-  // Logging after response finishes
+  // Log after response completes
   res.on('finish', () => {
     const duration = Date.now() - start;
     const timestamp = formatDate(new Date());
+
+    // Get real client IP behind Traefik
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress;
+
     console.log(
-      `[${timestamp}] INFO "${req.method} ${req.url}" ${res.statusCode} ${duration}ms`
+      `[${timestamp}] INFO "${req.method} ${req.url}" ${res.statusCode} ${duration}ms - ${ip}`
     );
   });
 });
 
+// Start server
 server.listen(PORT, HOST, () => {
-  console.log(`Server running on http://${HOST}:${PORT}`);
+  const primaryDomain = process.env.PRIMARY_DOMAIN;
+  const publicUrl = primaryDomain
+    ? `https://${primaryDomain}`
+    : `http://localhost:${PORT}`;
+
+  console.log('--------------------------------------------------');
+  console.log('🚀 Application Started');
+  console.log(`🌍 Public URL: ${publicUrl}`);
+  console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log('--------------------------------------------------');
+});
+
+// Graceful shutdown (important for Docker / EasyPanel)
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  server.close(() => {
+    console.log('Process terminated.');
+    process.exit(0);
+  });
 });

@@ -2,6 +2,7 @@
   "name": "hello-world",
   "version": "1.0.0",
   "private": true,
+  "description": "Minimal production-ready Node.js server for EasyPanel + Traefik",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
