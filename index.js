@@ -1,6 +1,7 @@
-const http = require('http');
+// index.js
 
-const PORT = process.env.PORT || 3000;
+const http = require('http');
+const PORT = 3000;
 const HOST = '0.0.0.0';
 
 // Format timestamp: YYYY-MM-DD HH:mm:ss
@@ -47,9 +48,9 @@ server.listen(PORT, HOST, () => {
     : `http://localhost:${PORT}`;
 
   console.log('--------------------------------------------------');
-  console.log('🚀 Application Started');
+  console.log('✅ Application Started');
   console.log(`🌍 Public URL: ${publicUrl}`);
-  console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📦 Environment: 'production'`);
   console.log('--------------------------------------------------');
 });
 
