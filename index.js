@@ -10,43 +10,19 @@ function formatDate(date) {
          `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-// Block suspicious requests
-function isBlockedPath(url) {
-  const blockedPatterns = [
-    /\.env/i,
-    /\.git/i,
-    /phpinfo/i,
-    /wp-admin/i,
-    /wp-login/i,
-    /wp-content/i,
-    /wp-includes/i,
-    /\.php$/i,
-    /\.php\d$/i,
-    /phpmyadmin/i,
-    /\.well-known.*\.php/i,
-    /admin/i,
-    /shell/i,
-    /upload/i,
-    /backup/i,
-    /config/i,
-    /\.sql/i,
-    /\.zip/i,
-    /\.key/i,
-    /\.pem/i,
-    /\.ini$/i,
-    /\.json$/i,
-    /\.yml$/i,
-    /\.yaml$/i,
-    /package-lock\.json/i,
-    /composer\.json/i,
-    /Dockerfile/i,
-    /docker-compose/i,
-    /\.aws/i,
-    /credentials/i,
-    /secret/i
+// Whitelist: Only allow these paths
+function isAllowedPath(url) {
+  // Remove query strings and normalize
+  const path = url.split('?')[0].toLowerCase();
+  
+  const allowedPatterns = [
+    /^\/$/,                    // Homepage only
+    /\.png$/,                  // PNG images
+    /\.jpg$/,                  // JPG images
+    /\.ico$/,                  // ICO files
   ];
   
-  return blockedPatterns.some(pattern => pattern.test(url));
+  return allowedPatterns.some(pattern => pattern.test(path));
 }
 
 const server = http.createServer((req, res) => {
@@ -63,41 +39,48 @@ const server = http.createServer((req, res) => {
              (xForwardedFor ? xForwardedFor.split(',')[0].trim() : null) ||
              req.socket.remoteAddress;
   
-  // Block malicious paths immediately
-  if (isBlockedPath(req.url)) {
-    res.statusCode = 404;
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('Not Found');
-    
-    // Log blocked request
-    const timestamp = formatDate(new Date());
+  const logRequest = (level, statusCode) => {
     const duration = Date.now() - start;
+    const timestamp = formatDate(new Date());
     console.log(
-      `[${timestamp}] BLOCKED "${req.method} ${req.url}" 404 ${duration}ms - ${ip}`
+      `[${timestamp}] ${level} "${req.method} ${req.url}" ${statusCode} ${duration}ms - ${ip}`
     );
+  };
+  
+  // Only allow GET and HEAD methods
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.statusCode = 405;
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Allow', 'GET, HEAD');
+    res.end('Method Not Allowed');
+    logRequest('BLOCKED', 405);
     return;
   }
   
-  // Basic routing
-  if (req.url === '/' && req.method === 'GET') {
+  // If not in whitelist, it's blocked
+  if (!isAllowedPath(req.url)) {
+    res.statusCode = 404;
+    res.setHeader('Content-Type', 'text/plain');
+    res.end('Not Found');
+    logRequest('BLOCKED', 404);
+    return;
+  }
+  
+  // Serve allowed content
+  if (req.url === '/' || req.url === '') {
     res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
     res.end('<h1>Hello World</h1>');
+    logRequest('INFO', 200);
   } else {
     res.statusCode = 404;
     res.setHeader('Content-Type', 'text/plain');
     res.end('Not Found');
+    logRequest('INFO', 404);
   }
-  
-  // Log after response completes
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    const timestamp = formatDate(new Date());
-    
-    console.log(
-      `[${timestamp}] INFO "${req.method} ${req.url}" ${res.statusCode} ${duration}ms - ${ip}`
-    );
-  });
 });
 
 // Start server
@@ -110,13 +93,22 @@ server.listen(PORT, HOST, () => {
   console.log('--------------------------------------------------');
   console.log('✅ Application Started');
   console.log(`🌍 Public URL: ${publicUrl}`);
-  console.log(`📦 Environment: 'production'`);
+  console.log(`📦 Environment: production`);
+  console.log(`🛡️  Security: Whitelist Mode (Deny All Except Allowed)`);
   console.log('--------------------------------------------------');
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
+  server.close(() => {
+    console.log('Process terminated.');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully...');
   server.close(() => {
     console.log('Process terminated.');
     process.exit(0);
