@@ -114,7 +114,7 @@ server.listen(PORT, HOST, () => {
   console.log('--------------------------------------------------');
 });
 
-// Graceful shutdown (important for Docker / EasyPanel)
+// Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
   server.close(() => {
