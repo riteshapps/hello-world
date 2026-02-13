@@ -17,9 +17,8 @@ function isAllowedPath(url) {
   
   const allowedPatterns = [
     /^\/$/,                    // Homepage only
-    /\.png$/,                  // PNG images
-    /\.jpg$/,                  // JPG images
-    /\.ico$/,                  // ICO files
+    /^\/favicon\.ico$/,        // Favicon
+    /^\/robots\.txt$/,         // Favicon
   ];
   
   return allowedPatterns.some(pattern => pattern.test(path));
