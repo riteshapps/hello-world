@@ -83,11 +83,6 @@ const server = http.createServer((req, res) => {
     res.statusCode = 200;
     res.setHeader('Content-Type', 'text/html');
     res.end('<h1>Hello World</h1>');
-  } else if (req.url === '/robots.txt' && req.method === 'GET') {
-    // Serve robots.txt to reduce noise in logs
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('User-agent: *\nDisallow: /admin\nDisallow: /config');
   } else {
     res.statusCode = 404;
     res.setHeader('Content-Type', 'text/plain');
