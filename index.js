@@ -34,7 +34,7 @@ function isBlockedPath(url) {
     /\.key/i,
     /\.pem/i,
     /\.ini$/i,
-    /\.json$/i, // Only block specific config files
+    /\.json$/i,
     /\.yml$/i,
     /\.yaml$/i,
     /package-lock\.json/i,
